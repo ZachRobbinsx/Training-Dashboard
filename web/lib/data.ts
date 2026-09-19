@@ -85,6 +85,26 @@ export async function getDaily(kind: string, sinceDays: number): Promise<Daily[]
   return rows.map((r) => ({ day: r.day, payload: r.payload ?? {} }));
 }
 
+/**
+ * Like getDaily but trims the big Garmin payloads (sleep and HRV carry minute-by-minute arrays)
+ * down to the summary parts the accessors use, so long look-backs stay fast.
+ */
+export async function getDailySlim(kind: string, sinceDays: number): Promise<Daily[]> {
+  const sql = db();
+  const rows = (await sql`
+    select day::text as day,
+           case ${kind}::text
+             when 'sleep' then jsonb_build_object('dailySleepDTO', payload->'dailySleepDTO')
+             when 'hrv' then jsonb_build_object('hrvSummary', payload->'hrvSummary')
+             else payload
+           end as payload
+    from daily_metrics
+    where kind = ${kind} and day > current_date - ${sinceDays}::int
+    order by day asc
+  `) as any[];
+  return rows.map((r) => ({ day: r.day, payload: r.payload ?? {} }));
+}
+
 export async function lastSync(): Promise<string | null> {
   const sql = db();
   const rows = (await sql`select to_char(max(updated_at) at time zone 'Europe/London', 'DD Mon HH24:MI') as t from (

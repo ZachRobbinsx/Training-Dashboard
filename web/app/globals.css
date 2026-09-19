@@ -20,6 +20,9 @@
   --elev: #06d6a0;
   --target: #fbbf24;
   --danger: #ef4444;
+  --ok: #22c55e;
+  --warn: #fbbf24;
+  --bad: #ef4444;
 
   /* categorical series for multi-session overlays (fixed order, validated palette) */
   --s1: #3987e5;
@@ -50,6 +53,9 @@
     --elev: #0d9488;
     --target: #b45309;
     --danger: #dc2626;
+    --ok: #15803d;
+    --warn: #b45309;
+    --bad: #dc2626;
     --s1: #2a78d6;
     --s2: #eb6834;
     --s3: #1baf7a;
@@ -151,3 +157,26 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 .login-card label { font-size: 13px; color: var(--text-secondary); }
 .login-card input { font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
 .err { color: var(--danger); margin: 0; font-size: 13px; }
+
+/* ---------- Today / coach ---------- */
+[data-s="good"], [data-s="green"] { --state: var(--ok); }
+[data-s="watch"], [data-s="amber"] { --state: var(--warn); }
+[data-s="low"], [data-s="red"] { --state: var(--bad); }
+[data-s="unknown"] { --state: var(--text-muted); }
+.hero { border-left: 4px solid var(--state); margin-bottom: 14px; }
+.hero h2 { margin: 4px 0 6px; font-size: 20px; line-height: 1.25; }
+.hero p { margin: 0; color: var(--text-secondary); font-size: 14px; }
+.pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--state); border: 1px solid var(--state); white-space: nowrap; }
+.session h3.title { margin: 2px 0 6px; font-size: 18px; text-transform: none; letter-spacing: 0; color: var(--text); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.steps { margin: 6px 0 10px; padding-left: 20px; }
+.steps li { margin: 4px 0; }
+.why { color: var(--text-secondary); font-size: 13px; margin: 8px 0 0; }
+.plain { margin: 6px 0 0; padding-left: 18px; color: var(--text-secondary); font-size: 13px; }
+.plain li { margin: 3px 0; }
+.insights { list-style: none; margin: 0; padding: 0; }
+.insights li { display: flex; gap: 10px; padding: 7px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.insights li:first-child { border-top: 0; }
+.insights .dot { flex: none; width: 8px; height: 8px; border-radius: 99px; margin-top: 7px; background: var(--state); }
+details.how summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; }
+details.how p, details.how li { font-size: 13px; color: var(--text-secondary); }
