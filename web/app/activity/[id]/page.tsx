@@ -20,7 +20,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
   const a = await getActivity(n);
   if (!a) notFound();
   const kind = sportOf(a.type);
-  const [href, hubName, color] = GYM.includes(a.type) ? (["/gym", "Training", "var(--power)"] as const) : HUB[kind];
+  const [href, hubName, color] = GYM.includes(a.type) ? (["/gym", "Gymming", "var(--power)"] as const) : HUB[kind];
 
   return (
     <>

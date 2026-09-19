@@ -103,13 +103,6 @@ export default async function Today() {
       <h2 className="sect">Daily</h2>
       <div className="tiles">
         <Tile
-          color={STATUS_COLOR[readinessStatus]}
-          badge={STATUS_LABEL[readinessStatus]}
-          label="Garmin readiness"
-          value={c.garmin?.score != null ? String(Math.round(c.garmin.score)) : "–"}
-          sub={c.garmin?.level ? c.garmin.level.toLowerCase() : "Garmin's own score"}
-        />
-        <Tile
           color={STATUS_COLOR[st("sleep")]}
           badge={STATUS_LABEL[st("sleep")]}
           label="Sleep"
@@ -125,13 +118,18 @@ export default async function Today() {
           sub={hrv7 != null ? `7-day avg ${Math.round(hrv7)}${hrvWeekly != null ? ` · Garmin ${Math.round(hrvWeekly)}` : ""}` : undefined}
         />
         <Tile color={STATUS_COLOR[st("rhr")]} badge={STATUS_LABEL[st("rhr")]} label="Resting HR" value={rhr != null ? String(Math.round(rhr)) : "–"} unit="bpm" sub={rhr7 != null ? `7-day avg ${Math.round(rhr7)}` : undefined} />
+        <Tile
+          color={STATUS_COLOR[readinessStatus]}
+          badge={STATUS_LABEL[readinessStatus]}
+          label="Garmin readiness"
+          value={c.garmin?.score != null ? String(Math.round(c.garmin.score)) : "–"}
+          sub={c.garmin?.level ? c.garmin.level.toLowerCase() : "Garmin's own score"}
+        />
         <Tile color={STATUS_COLOR[st("bb")]} badge={STATUS_LABEL[st("bb")]} label="Body battery (peak)" value={bb != null ? String(Math.round(bb)) : "–"} sub={bb7 != null ? `7-day avg ${Math.round(bb7)}` : undefined} />
       </div>
 
       <h2 className="sect">Weekly</h2>
       <div className="tiles">
-        <Tile color={STATUS_COLOR[st("load")]} badge={STATUS_LABEL[st("load")]} label="Load vs 4-wk avg" value={c.load.acwr != null ? `${c.load.acwr.toFixed(2)}×` : "–"} sub="sweet spot 0.8–1.3" />
-        <Tile color={STATUS_COLOR[formStatus]} badge={formBadge} label="Form" value={String(c.load.form)} sub={`fitness ${c.load.ctl} · fatigue ${c.load.atl}`} />
         <Tile
           color={STATUS_COLOR[sessStatus]}
           badge={sessBadge}
@@ -141,6 +139,8 @@ export default async function Today() {
           sub={`${fmtHours(weekHours)} · ${round(weekKm, 1)} km${prevAvg != null ? ` · usual week ${fmtHours(prevAvg)}` : ""}`}
         />
         <Tile color={STATUS_COLOR[runStatus]} badge={runStatus === "good" ? "Room" : runStatus === "watch" ? "Near cap" : "Over cap"} label="Run min (7 days)" value={String(c.runMinutes.last7)} unit={`/ ${c.runMinutes.cap}`} sub="weekly cap" />
+        <Tile color={STATUS_COLOR[st("load")]} badge={STATUS_LABEL[st("load")]} label="Load vs 4-wk avg" value={c.load.acwr != null ? `${c.load.acwr.toFixed(2)}×` : "–"} sub="sweet spot 0.8–1.3" />
+        <Tile color={STATUS_COLOR[formStatus]} badge={formBadge} label="Form" value={String(c.load.form)} sub={`fitness ${c.load.ctl} · fatigue ${c.load.atl}`} />
         <Tile
           color={STATUS_COLOR[wStatus]}
           badge={wBadge}

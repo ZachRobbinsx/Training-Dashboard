@@ -188,3 +188,5 @@ details.how p, details.how li { font-size: 13px; color: var(--text-secondary); }
 .sect::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 .insights .pill { margin-left: auto; align-self: flex-start; }
 .chart-s > * { border-left: 4px solid var(--state); }
+.login-card { text-align: center; }
+.login-card .enter { display: block; padding: 10px 12px; border-radius: 10px; background: var(--accent, var(--text)); color: var(--bg); font-weight: 700; text-decoration: none; }

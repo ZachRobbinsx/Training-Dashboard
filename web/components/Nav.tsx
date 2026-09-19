@@ -9,7 +9,7 @@ const LINKS = [
   ["/running", "Running"],
   ["/cycling", "Cycling"],
   ["/swimming", "Swimming"],
-  ["/gym", "Training"],
+  ["/gym", "Gymming"],
 ];
 
 export default function Nav() {

@@ -43,7 +43,7 @@ export default async function Gym() {
 
   return (
     <>
-      <h1>Training</h1>
+      <h1>Gymming</h1>
       <p className="lede">Strength, HIIT and gym-based sessions. Open a session to add notes on what you lifted and how it felt.</p>
 
       <div className="tiles">
