@@ -186,3 +186,5 @@ details.how p, details.how li { font-size: 13px; color: var(--text-secondary); }
 .sect { display: flex; align-items: center; gap: 10px; margin: 30px 0 12px; font-size: 16px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text); }
 .sect::before { content: ""; width: 4px; height: 18px; border-radius: 2px; background: var(--accent); }
 .sect::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.insights .pill { margin-left: auto; align-self: flex-start; }
+.chart-s > * { border-left: 4px solid var(--state); }

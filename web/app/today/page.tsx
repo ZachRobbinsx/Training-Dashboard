@@ -59,11 +59,35 @@ export default async function Today() {
   const weekHours = week.reduce((t, a) => t + durSec(a), 0) / 3600;
   const weekKm = week.reduce((t, a) => t + km(a), 0);
 
+  // Sessions: this week's hours so far against your average of the previous four full weeks, pro-rated for the days elapsed.
+  const thisMonday = weekStart(c.today);
+  const prevHours = [1, 2, 3, 4].map((i) => {
+    const from = addDays(thisMonday, -7 * i);
+    const to = addDays(from, 7);
+    return acts.filter((a) => a.day >= from && a.day < to).reduce((t, a) => t + durSec(a), 0) / 3600;
+  });
+  const prevAvg = avg(prevHours);
+  const elapsed = (new Date(c.today + "T00:00:00Z").getUTCDay() + 6) % 7 + 1; // Mon=1 ... Sun=7
+  const expectedHours = prevAvg != null ? (prevAvg * elapsed) / 7 : null;
+  const sessRatio = expectedHours && elapsed >= 2 ? weekHours / expectedHours : null;
+  const sessStatus: "good" | "watch" | "low" | "unknown" = sessRatio == null ? "unknown" : sessRatio > 1.6 ? "low" : sessRatio > 1.3 || sessRatio < 0.4 ? "watch" : "good";
+  const sessBadge = sessRatio == null ? "Too early" : sessRatio > 1.6 ? "Heavy" : sessRatio > 1.3 ? "Busy" : sessRatio < 0.4 ? "Light" : "On track";
+
+  // Form: fitness minus fatigue, judged relative to your fitness level.
+  const formRatio = c.load.form / Math.max(c.load.ctl, 10);
+  const formStatus: "good" | "watch" | "low" = formRatio < -0.25 ? "low" : formRatio < -0.1 ? "watch" : "good";
+  const formBadge = formRatio < -0.25 ? "Fatigued" : formRatio < -0.1 ? "Tired" : formRatio > 0.1 ? "Fresh" : "Balanced";
+
+  // Weight: change in the 7-day average versus the week before. Stable is treated as good.
+  const wDelta = w7 != null && wPrev != null ? w7 - wPrev : null;
+  const wStatus: "good" | "watch" | "low" | "unknown" = wDelta == null ? "unknown" : Math.abs(wDelta) <= 0.7 ? "good" : Math.abs(wDelta) <= 1.5 ? "watch" : "low";
+  const wBadge = wDelta == null ? "No trend" : Math.abs(wDelta) <= 0.7 ? "Stable" : Math.abs(wDelta) <= 1.5 ? "Changing" : "Big swing";
+
   return (
     <>
       <h1>Overview</h1>
       <p className="lede">
-        {longDate(c.today)}. Built from your sleep, HRV, resting heart rate, body battery and recent training. Last synced {synced ?? "never"} (London time). Tile colours show status: green is normal, amber is worth watching, red is a flag, grey is for information only.
+        {longDate(c.today)}. Built from your sleep, HRV, resting heart rate, body battery and recent training. Last synced {synced ?? "never"} (London time). Tile colours show status: green is normal, amber is worth watching, red is a flag, grey means not enough data yet.
       </p>
 
       <h2 className="sect">Status</h2>
@@ -85,7 +109,13 @@ export default async function Today() {
           value={c.garmin?.score != null ? String(Math.round(c.garmin.score)) : "–"}
           sub={c.garmin?.level ? c.garmin.level.toLowerCase() : "Garmin's own score"}
         />
-        <Tile color={STATUS_COLOR[st("rhr")]} badge={STATUS_LABEL[st("rhr")]} label="Resting HR" value={rhr != null ? String(Math.round(rhr)) : "–"} unit="bpm" sub={rhr7 != null ? `7-day avg ${Math.round(rhr7)}` : undefined} />
+        <Tile
+          color={STATUS_COLOR[st("sleep")]}
+          badge={STATUS_LABEL[st("sleep")]}
+          label="Sleep"
+          value={sleepLast != null ? fmtHours(sleepLast) : "–"}
+          sub={[sleepScore != null ? `score ${sleepScore}` : null, sleep7 != null ? `7-day avg ${fmtHours(sleep7)}` : null].filter(Boolean).join(" · ") || undefined}
+        />
         <Tile
           color={STATUS_COLOR[st("hrv")]}
           badge={STATUS_LABEL[st("hrv")]}
@@ -94,33 +124,35 @@ export default async function Today() {
           unit="ms"
           sub={hrv7 != null ? `7-day avg ${Math.round(hrv7)}${hrvWeekly != null ? ` · Garmin ${Math.round(hrvWeekly)}` : ""}` : undefined}
         />
-        <Tile
-          color={STATUS_COLOR[st("sleep")]}
-          badge={STATUS_LABEL[st("sleep")]}
-          label="Sleep"
-          value={sleepLast != null ? fmtHours(sleepLast) : "–"}
-          sub={[sleepScore != null ? `score ${sleepScore}` : null, sleep7 != null ? `7-day avg ${fmtHours(sleep7)}` : null].filter(Boolean).join(" · ") || undefined}
-        />
+        <Tile color={STATUS_COLOR[st("rhr")]} badge={STATUS_LABEL[st("rhr")]} label="Resting HR" value={rhr != null ? String(Math.round(rhr)) : "–"} unit="bpm" sub={rhr7 != null ? `7-day avg ${Math.round(rhr7)}` : undefined} />
         <Tile color={STATUS_COLOR[st("bb")]} badge={STATUS_LABEL[st("bb")]} label="Body battery (peak)" value={bb != null ? String(Math.round(bb)) : "–"} sub={bb7 != null ? `7-day avg ${Math.round(bb7)}` : undefined} />
       </div>
 
       <h2 className="sect">Weekly</h2>
       <div className="tiles">
-        <Tile color={NEUTRAL} label="This week" value={String(week.length)} unit="sessions" sub={`${fmtHours(weekHours)} · ${round(weekKm, 1)} km`} />
         <Tile color={STATUS_COLOR[st("load")]} badge={STATUS_LABEL[st("load")]} label="Load vs 4-wk avg" value={c.load.acwr != null ? `${c.load.acwr.toFixed(2)}×` : "–"} sub="sweet spot 0.8–1.3" />
-        <Tile color={NEUTRAL} label="Form" value={String(c.load.form)} sub={`fitness ${c.load.ctl} · fatigue ${c.load.atl}`} />
+        <Tile color={STATUS_COLOR[formStatus]} badge={formBadge} label="Form" value={String(c.load.form)} sub={`fitness ${c.load.ctl} · fatigue ${c.load.atl}`} />
         <Tile
-          color={NEUTRAL}
+          color={STATUS_COLOR[sessStatus]}
+          badge={sessBadge}
+          label="Sessions this week"
+          value={String(week.length)}
+          unit="sessions"
+          sub={`${fmtHours(weekHours)} · ${round(weekKm, 1)} km${prevAvg != null ? ` · usual week ${fmtHours(prevAvg)}` : ""}`}
+        />
+        <Tile color={STATUS_COLOR[runStatus]} badge={runStatus === "good" ? "Room" : runStatus === "watch" ? "Near cap" : "Over cap"} label="Run min (7 days)" value={String(c.runMinutes.last7)} unit={`/ ${c.runMinutes.cap}`} sub="weekly cap" />
+        <Tile
+          color={STATUS_COLOR[wStatus]}
+          badge={wBadge}
           label="Weight"
           value={kg != null ? String(round(kg, 1)) : "–"}
           unit="kg"
           sub={
             w7 != null
-              ? `7-day avg ${round(w7, 1)} kg${wPrev != null ? ` · ${w7 - wPrev >= 0 ? "+" : "−"}${Math.abs(round(w7 - wPrev, 1)!)} vs prior week` : ""}`
+              ? `7-day avg ${round(w7, 1)} kg${wDelta != null ? ` · ${wDelta >= 0 ? "+" : "−"}${Math.abs(round(wDelta, 1)!)} vs prior week` : ""}`
               : "no weigh-in in the last 7 days"
           }
         />
-        <Tile color={STATUS_COLOR[runStatus]} badge={runStatus === "good" ? "Room" : runStatus === "watch" ? "Near cap" : "Over cap"} label="Run min (7 days)" value={String(c.runMinutes.last7)} unit={`/ ${c.runMinutes.cap}`} sub="weekly cap" />
       </div>
 
       <h2 className="sect">Workout</h2>
@@ -192,15 +224,16 @@ export default async function Today() {
           <header className="card-head"><h3>What has been changing</h3><p>Your recovery and training over recent weeks.</p></header>
           <ul className="insights">
             {c.insights.map((i) => (
-              <li key={i.text} data-s={i.tone === "watch" ? "watch" : i.tone === "good" ? "good" : "unknown"}>
+              <li key={i.text} data-s={i.tone}>
                 <span className="dot" />
                 <span>{i.text}</span>
+                <span className="pill">{i.tone === "good" ? "Good" : i.tone === "watch" ? "Watch" : "Flag"}</span>
               </li>
             ))}
           </ul>
         </section>
 
-        <div className="wide">
+        <div className="wide chart-s" data-s={st("load")}>
           <Chart
             title="Daily training load"
             subtitle="Estimated from duration and heart-rate intensity, last 6 weeks"
@@ -215,7 +248,7 @@ export default async function Today() {
             ]}
           />
         </div>
-        <Chart
+        <div className="chart-s" data-s={formStatus}><Chart
           title="Fitness, fatigue and form"
           subtitle="Fitness builds slowly, fatigue quickly. Form = fitness − fatigue"
           data={c.charts.fitness}
@@ -226,7 +259,7 @@ export default async function Today() {
             { key: "Form", label: "Form", color: "var(--power)" },
           ]}
         />
-        <Chart
+        </div><div className="chart-s" data-s={st("hrv")}><Chart
           title="HRV vs your baseline"
           subtitle="Overnight HRV (ms) and the average of the previous 28 nights"
           data={c.charts.hrv}
@@ -237,7 +270,8 @@ export default async function Today() {
             { key: "Your baseline", label: "Your baseline", color: "var(--text-muted)" },
           ]}
         />
-        <div className="wide">
+        </div>
+        <div className="wide chart-s" data-s={st("rhr")}>
           <Chart
             title="Resting HR vs your baseline"
             subtitle="bpm and the average of the previous 28 days. Rising above baseline is an early fatigue flag"

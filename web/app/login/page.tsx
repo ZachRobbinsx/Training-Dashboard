@@ -1,3 +1,6 @@
+import { redirect } from "next/navigation";
+import { REQUIRE_LOGIN } from "@/lib/config";
+
 export const metadata = { title: "Sign in" };
 
 export default async function Login({
@@ -5,6 +8,7 @@ export default async function Login({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  if (!REQUIRE_LOGIN) redirect("/today");
   const { error } = await searchParams;
   return (
     <main className="login">

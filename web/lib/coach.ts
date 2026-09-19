@@ -18,7 +18,7 @@ export type Session = {
   why: string;
 };
 export type RunAdvice = { allowed: boolean; minutes: number; headline: string; reasons: string[]; guardrails: string[] };
-export type Insight = { tone: "good" | "watch" | "info"; text: string };
+export type Insight = { tone: "good" | "watch" | "low"; text: string };
 export type Row = Record<string, string | number | null>;
 
 export type CoachInput = {
@@ -680,7 +680,7 @@ function buildInsights(x: {
   if (h7.length >= 4 && hPrev.length >= 10) {
     const pct = (mean(h7)! / mean(hPrev)! - 1) * 100;
     out.push({
-      tone: pct <= -8 ? "watch" : pct >= 5 ? "good" : "info",
+      tone: pct <= -15 ? "low" : pct <= -8 ? "watch" : "good",
       text: `HRV: 7-night average ${r0(mean(h7)!)} ms, ${signed(pct)}% versus the previous four weeks. ${pct <= -8 ? "A sustained dip like this usually means you need more recovery." : pct >= 5 ? "Trending up: you are adapting well." : "Steady."}`,
     });
   }
@@ -691,7 +691,7 @@ function buildInsights(x: {
   if (r7.length >= 4 && rPrev.length >= 10) {
     const d = mean(r7)! - mean(rPrev)!;
     out.push({
-      tone: d >= 3 ? "watch" : d <= -2 ? "good" : "info",
+      tone: d >= 6 ? "low" : d >= 3 ? "watch" : "good",
       text: `Resting HR: 7-day average ${r0(mean(r7)!)} bpm (${signed(d, 1)} versus the previous four weeks). ${d >= 3 ? "Creeping up is an early fatigue or illness flag." : d <= -2 ? "Coming down: fitness is improving." : "Stable."}`,
     });
   }
@@ -702,7 +702,7 @@ function buildInsights(x: {
   if (s7.length >= 4) {
     const short = s14.filter((p) => p.v < 6.5).length;
     out.push({
-      tone: mean(s7)! < COACH.sleepOkH - 0.5 ? "watch" : "info",
+      tone: mean(s7)! < COACH.sleepLowH ? "low" : mean(s7)! < COACH.sleepOkH - 0.5 ? "watch" : "good",
       text: `Sleep: ${hrs(mean(s7)!)} average over the last week. ${short} of the last ${s14.length} nights were under 6.5 h.`,
     });
   }
@@ -710,7 +710,7 @@ function buildInsights(x: {
   // Load ramp
   if (x.acwr != null) {
     out.push({
-      tone: x.acwr > 1.3 ? "watch" : "info",
+      tone: x.acwr > 1.5 ? "low" : x.acwr > 1.3 ? "watch" : "good",
       text: `Load: this week is ${x.acwr.toFixed(2)} × your 4-week average. ${x.acwr > 1.5 ? "That is a steep jump. Injury risk climbs, so back off." : x.acwr > 1.3 ? "On the high side. Fine for a week, not for several." : x.acwr < 0.8 ? "Lighter than usual: an easy week, or room to build." : "In the productive range."}`,
     });
   }
@@ -732,7 +732,7 @@ function buildInsights(x: {
       const a = mean(after.stress)!;
       const b = mean(after.rest)!;
       out.push({
-        tone: "info",
+        tone: a - b < -10 ? "watch" : "good",
         text: `How you respond: the morning after a hard or long day your HRV averages ${signed(a)}% versus your baseline (${after.stress.length} days), against ${signed(b)}% after rest days (${after.rest.length} days).${a - b < -10 ? " You take a real hit from big days, so space them out." : a - b > -3 ? " Big days barely dent your HRV. You are recovering well." : ""}`,
       });
     }
@@ -743,17 +743,17 @@ function buildInsights(x: {
   if (w.length >= 5) {
     const a = mean(w.slice(0, Math.min(3, w.length)).map((p) => p.v))!;
     const b = mean(w.slice(-3).map((p) => p.v))!;
-    out.push({ tone: "info", text: `Weight: ${r1(b)} kg, ${signed(b - a, 1)} kg over the last four weeks.` });
+    out.push({ tone: Math.abs(b - a) > 1.5 ? "low" : Math.abs(b - a) > 0.7 ? "watch" : "good", text: `Weight: ${r1(b)} kg, ${signed(b - a, 1)} kg over the last four weeks.` });
   }
 
   // Hard sessions & rest
   out.push({
-    tone: x.hardLast7 >= 3 || x.restDays14 <= 1 ? "watch" : "info",
+    tone: x.hardLast7 >= 4 || x.restDays14 <= 0 ? "low" : x.hardLast7 >= 3 || x.restDays14 <= 1 ? "watch" : "good",
     text: `Structure: ${x.hardLast7} hard session${x.hardLast7 === 1 ? "" : "s"} in the last 7 days and ${x.restDays14} full rest day${x.restDays14 === 1 ? "" : "s"} in the last 14 (commutes not counted).`,
   });
 
   // Running exposure
-  out.push({ tone: x.runMin7 > x.cap ? "watch" : "info", text: `Running: ${Math.round(x.runMin7)} of ${x.cap} allowed minutes used in the last 7 days.` });
+  out.push({ tone: x.runMin7 > x.cap * 1.15 ? "low" : x.runMin7 > x.cap ? "watch" : "good", text: `Running: ${Math.round(x.runMin7)} of ${x.cap} allowed minutes used in the last 7 days.` });
 
   return out;
 }

@@ -26,3 +26,7 @@ export const COACH = {
     "resort_skiing", "resort_snowboarding", "bouldering", "trail_running",
   ],
 };
+
+// Password gate. false = anyone with the site address can open it (no login screen).
+// Set to true to bring the password back (needs DASHBOARD_PASSWORD and AUTH_SECRET in Vercel).
+export const REQUIRE_LOGIN = false;

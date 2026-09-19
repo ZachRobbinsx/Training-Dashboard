@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { REQUIRE_LOGIN } from "@/lib/config";
 
 const LINKS = [
   ["/today", "Overview"],
@@ -24,9 +25,11 @@ export default function Nav() {
           </Link>
         ))}
       </nav>
-      <form className="logout" method="post" action="/api/logout">
-        <button type="submit">Sign out</button>
-      </form>
+      {REQUIRE_LOGIN && (
+        <form className="logout" method="post" action="/api/logout">
+          <button type="submit">Sign out</button>
+        </form>
+      )}
     </div>
   );
 }
