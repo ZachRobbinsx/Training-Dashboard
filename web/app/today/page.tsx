@@ -85,7 +85,7 @@ export default async function Today() {
 
   return (
     <>
-      <h1>Overview</h1>
+      <h1>Dashboard</h1>
       <p className="lede">
         {longDate(c.today)}. Built from your sleep, HRV, resting heart rate, body battery and recent training. Last synced {synced ?? "never"} (London time). Tile colours show status: green is normal, amber is worth watching, red is a flag, grey means not enough data yet.
       </p>

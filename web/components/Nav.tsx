@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { REQUIRE_LOGIN } from "@/lib/config";
 
 const LINKS = [
-  ["/today", "Overview"],
+  ["/today", "Dashboard"],
   ["/running", "Running"],
   ["/cycling", "Cycling"],
   ["/swimming", "Swimming"],

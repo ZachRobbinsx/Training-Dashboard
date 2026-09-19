@@ -1,23 +1,14 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { REQUIRE_LOGIN } from "@/lib/config";
 
-export const metadata = { title: "Training" };
+export const metadata = { title: "Sign in" };
 
 export default async function Login({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  if (!REQUIRE_LOGIN) {
-    return (
-      <main className="login">
-        <div className="card login-card">
-          <h1>Training</h1>
-          <Link href="/today" className="enter">Enter</Link>
-        </div>
-      </main>
-    );
-  }
+  if (!REQUIRE_LOGIN) redirect("/today");
   const { error } = await searchParams;
   return (
     <main className="login">
