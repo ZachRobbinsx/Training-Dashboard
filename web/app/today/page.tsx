@@ -52,21 +52,22 @@ export default async function Today() {
 
   return (
     <>
-      <h1>Plan</h1>
+      <h1>Overview</h1>
       <p className="lede">
         {longDate(c.today)}. Built from your sleep, HRV, resting heart rate, body battery and recent training. Last synced {synced ?? "never"} (London time).
       </p>
 
+      <h2 className="sect">Status</h2>
       <section className="card hero" data-s={c.readiness.level}>
         <div className="eyebrow" style={{ color: "var(--state)" }}>{LEVEL_LABEL[c.readiness.level]}</div>
         <h2>{c.readiness.headline}</h2>
         <p>{c.readiness.summary}</p>
       </section>
-
       {c.notes.map((n) => (
-        <p key={n} className="lede" style={{ marginTop: -6 }}>{n}</p>
+        <p key={n} className="lede" style={{ marginTop: 10 }}>{n}</p>
       ))}
 
+      <h2 className="sect">Daily</h2>
       <div className="tiles">
         <Tile
           color="var(--power)"
@@ -91,12 +92,17 @@ export default async function Today() {
         <Tile color="var(--elev)" label="Body battery (peak)" value={bb != null ? String(Math.round(bb)) : "–"} />
         <Tile color="var(--run)" label="Steps" value={steps != null ? steps.toLocaleString("en-GB") : "–"} />
         <Tile color="var(--target)" label="Weight" value={kg != null ? String(round(kg, 1)) : "–"} unit="kg" />
+      </div>
+
+      <h2 className="sect">Weekly</h2>
+      <div className="tiles">
         <Tile color="var(--bike)" label="This week" value={String(week.length)} unit="sessions" sub={`${fmtHours(weekHours)} · ${round(weekKm, 1)} km`} />
         <Tile color="var(--hr)" label="Load vs 4-wk avg" value={c.load.acwr != null ? `${c.load.acwr.toFixed(2)}×` : "–"} sub="sweet spot 0.8–1.3" />
         <Tile color="var(--elev)" label="Form" value={String(c.load.form)} sub={`fitness ${c.load.ctl} · fatigue ${c.load.atl}`} />
         <Tile color="var(--run)" label="Run min (7 days)" value={String(c.runMinutes.last7)} unit={`/ ${c.runMinutes.cap}`} sub="weekly cap" />
       </div>
 
+      <h2 className="sect">Workout</h2>
       <div className="grid">
         <section className="card wide session">
           <header className="card-head"><h3>Suggested session</h3></header>
@@ -136,29 +142,33 @@ export default async function Today() {
           <p style={{ margin: "4px 0" }}>{c.tomorrow}</p>
           <p className="why">Recheck each morning. The plan changes with how your body reports in.</p>
         </section>
+      </div>
 
-        <section className="card wide">
-          <header className="card-head"><h3>What your body is saying</h3><p>Each signal is compared with your own recent normal, not a population average.</p></header>
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Signal</th><th>Now</th><th>Your normal</th><th>Status</th><th>What it means</th></tr></thead>
-              <tbody>
-                {c.signals.map((g) => (
-                  <tr key={g.key}>
-                    <td>{g.label}</td>
-                    <td>{g.value}</td>
-                    <td>{g.baseline}</td>
-                    <td><span className="pill" data-s={g.status}>{STATUS_LABEL[g.status]}</span></td>
-                    <td>{g.note}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+      <h2 className="sect">Health</h2>
+      <section className="card">
+        <header className="card-head"><h3>What your body is saying</h3><p>Each signal is compared with your own recent normal, not a population average.</p></header>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Signal</th><th>Now</th><th>Your normal</th><th>Status</th><th>What it means</th></tr></thead>
+            <tbody>
+              {c.signals.map((g) => (
+                <tr key={g.key}>
+                  <td>{g.label}</td>
+                  <td>{g.value}</td>
+                  <td>{g.baseline}</td>
+                  <td><span className="pill" data-s={g.status}>{STATUS_LABEL[g.status]}</span></td>
+                  <td>{g.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
+      <h2 className="sect">Trends</h2>
+      <div className="grid">
         <section className="card wide">
-          <header className="card-head"><h3>Trends</h3><p>What has been changing in your recovery and training.</p></header>
+          <header className="card-head"><h3>What has been changing</h3><p>Your recovery and training over recent weeks.</p></header>
           <ul className="insights">
             {c.insights.map((i) => (
               <li key={i.text} data-s={i.tone === "watch" ? "watch" : i.tone === "good" ? "good" : "unknown"}>

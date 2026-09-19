@@ -9,7 +9,7 @@ import { fmtDur, mmss, shortDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-const HUB = { run: ["/running", "Run"], ride: ["/cycling", "Bike"], swim: ["/swimming", "Swim"] } as const;
+const HUB = { run: ["/running", "Running"], ride: ["/cycling", "Cycling"], swim: ["/swimming", "Swimming"] } as const;
 
 export default async function Compare({ searchParams }: { searchParams: Promise<{ ids?: string | string[] }> }) {
   const raw = (await searchParams).ids;

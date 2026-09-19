@@ -11,7 +11,7 @@ import { fmtDur, longDate, mmss } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-const HUB = { run: ["/running", "Run", "var(--run)"], ride: ["/cycling", "Bike", "var(--bike)"], swim: ["/swimming", "Swim", "var(--swim)"], other: ["/activities", "Activities", "var(--accent)"] } as const;
+const HUB = { run: ["/running", "Running", "var(--run)"], ride: ["/cycling", "Cycling", "var(--bike)"], swim: ["/swimming", "Swimming", "var(--swim)"], other: ["/activities", "Activities", "var(--accent)"] } as const;
 
 export default async function ActivityPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -20,7 +20,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
   const a = await getActivity(n);
   if (!a) notFound();
   const kind = sportOf(a.type);
-  const [href, hubName, color] = GYM.includes(a.type) ? (["/gym", "Gym", "var(--power)"] as const) : HUB[kind];
+  const [href, hubName, color] = GYM.includes(a.type) ? (["/gym", "Training", "var(--power)"] as const) : HUB[kind];
 
   return (
     <>
