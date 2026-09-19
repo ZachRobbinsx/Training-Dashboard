@@ -30,7 +30,7 @@
   --s6: #9085e9;
   --s-other: #6b6a64;
 }
-@media (prefers-color-scheme: light) {
+@media (prefers-color-scheme: light) and (min-width: 99999px) {
   :root {
     color-scheme: light;
     --bg: #f4f3f0;
