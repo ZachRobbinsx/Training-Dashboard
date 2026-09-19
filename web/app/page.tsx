@@ -3,7 +3,7 @@ import Chart from "@/components/Chart";
 import Tile from "@/components/Tile";
 import {
   BIKE, RUN, SWIM, avg, durSec, getActivities, getDaily, hrvOf, km, lastSync, lastWeeks,
-  round, sleepOf, statsOf, weekStart, weightKg, paceSecPerKm,
+  round, sleepOf, statsOf, weekStart, weightKg, paceSecPerKm, swimPaceSecPer100, num,
 } from "@/lib/data";
 import { fmtDur, fmtHours, longDate, mmss } from "@/lib/format";
 
@@ -93,7 +93,7 @@ export default async function Overview() {
           <header className="card-head"><h3>Recent activities</h3></header>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Date</th><th>Activity</th><th>Type</th><th>Dist</th><th>Time</th><th>Pace</th><th>Avg HR</th></tr></thead>
+              <thead><tr><th>Date</th><th>Activity</th><th>Type</th><th>Dist</th><th>Time</th><th>Pace / speed</th><th>Avg HR</th></tr></thead>
               <tbody>
                 {recent.map((a) => {
                   const p = paceSecPerKm(a);
@@ -104,7 +104,7 @@ export default async function Overview() {
                       <td><span className="tag">{a.type.replace(/_/g, " ")}</span></td>
                       <td>{km(a) ? `${km(a).toFixed(1)} km` : "–"}</td>
                       <td>{fmtDur(durSec(a))}</td>
-                      <td>{RUN.includes(a.type) && p ? `${mmss(p)}/km` : "–"}</td>
+                      <td>{RUN.includes(a.type) ? (p ? `${mmss(p)}/km` : "–") : SWIM.includes(a.type) ? (swimPaceSecPer100(a) ? `${mmss(swimPaceSecPer100(a)!)}/100m` : "–") : BIKE.includes(a.type) && (num(a.s.averageSpeed) ?? 0) > 0 ? `${((a.s.averageSpeed as number) * 3.6).toFixed(1)} km/h` : "–"}</td>
                       <td>{a.s.averageHR ? Math.round(a.s.averageHR) : "–"}</td>
                     </tr>
                   );
