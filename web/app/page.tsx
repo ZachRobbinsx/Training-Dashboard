@@ -101,7 +101,7 @@ export default async function Overview() {
                     <tr key={a.id}>
                       <td>{longDate(a.day)}</td>
                       <td><Link href={`/activity/${a.id}`}>{a.name || "Untitled"}</Link></td>
-                      <td><span className="tag">{a.type.replace(/_/g, " ")}</span></td>
+                      <td><span className="tag">{a.type.replace("road_biking", "cycling").replace(/_/g, " ")}</span></td>
                       <td>{km(a) ? `${km(a).toFixed(1)} km` : "–"}</td>
                       <td>{fmtDur(durSec(a))}</td>
                       <td>{RUN.includes(a.type) ? (p ? `${mmss(p)}/km` : "–") : SWIM.includes(a.type) ? (swimPaceSecPer100(a) ? `${mmss(swimPaceSecPer100(a)!)}/100m` : "–") : BIKE.includes(a.type) && (num(a.s.averageSpeed) ?? 0) > 0 ? `${((a.s.averageSpeed as number) * 3.6).toFixed(1)} km/h` : "–"}</td>

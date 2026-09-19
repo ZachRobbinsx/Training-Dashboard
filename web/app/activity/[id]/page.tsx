@@ -25,7 +25,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
   return (
     <>
       <Link href={href} className="back">← {hubName}</Link>
-      <div className="eyebrow" style={{ color, marginTop: 10 }}>{a.type.replace(/_/g, " ")}</div>
+      <div className="eyebrow" style={{ color, marginTop: 10 }}>{a.type.replace("road_biking", "cycling").replace(/_/g, " ")}</div>
       <h1>{a.name || "Untitled"}</h1>
       <p className="lede">{longDate(a.day)} · {a.time}</p>
 

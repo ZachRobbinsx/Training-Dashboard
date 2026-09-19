@@ -34,7 +34,7 @@ export default async function Activities() {
                     <td>{longDate(a.day)}</td>
                     <td>{a.time}</td>
                     <td><Link href={`/activity/${a.id}`}>{a.name || "Untitled"}</Link></td>
-                    <td><span className="tag">{a.type.replace(/_/g, " ")}</span></td>
+                    <td><span className="tag">{a.type.replace("road_biking", "cycling").replace(/_/g, " ")}</span></td>
                     <td>{dist}</td>
                     <td>{fmtDur(durSec(a))}</td>
                     <td>{pace}</td>
