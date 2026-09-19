@@ -4,13 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const LINKS = [
-  ["/", "Overview"],
-  ["/today", "Today"],
-  ["/recovery", "Recovery"],
-  ["/running", "Running"],
-  ["/cycling", "Cycling"],
-  ["/swimming", "Swimming"],
-  ["/activities", "Activities"],
+  ["/today", "Plan"],
+  ["/swimming", "Swim"],
+  ["/cycling", "Bike"],
+  ["/running", "Run"],
+  ["/gym", "Gym"],
 ];
 
 export default function Nav() {

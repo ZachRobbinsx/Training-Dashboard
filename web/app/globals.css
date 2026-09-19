@@ -180,3 +180,4 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 .insights .dot { flex: none; width: 8px; height: 8px; border-radius: 99px; margin-top: 7px; background: var(--state); }
 details.how summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; }
 details.how p, details.how li { font-size: 13px; color: var(--text-secondary); }
+.alt-sep { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 12px; }

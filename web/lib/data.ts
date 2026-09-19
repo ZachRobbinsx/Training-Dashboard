@@ -11,6 +11,7 @@ export function db() {
 export const RUN = ["running", "trail_running", "treadmill_running", "track_running"];
 export const BIKE = ["cycling", "road_biking", "gravel_cycling", "mountain_biking", "virtual_ride", "indoor_cycling", "e_bike_fitness"];
 export const SWIM = ["lap_swimming", "open_water_swimming"];
+export const GYM = ["strength_training", "hiit", "fitness_equipment", "indoor_cardio"];
 
 export type Split = {
   x: number; d: number; t: number; pace: number | null; speed: number | null;

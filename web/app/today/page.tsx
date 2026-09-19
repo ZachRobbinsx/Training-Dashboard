@@ -1,15 +1,26 @@
 import Chart from "@/components/Chart";
 import Tile from "@/components/Tile";
-import { getActivities, getDaily, getDailySlim, lastSync } from "@/lib/data";
-import { buildCoach } from "@/lib/coach";
+import {
+  type Daily, avg, durSec, getActivities, getDaily, getDailySlim, hrvOf, km, lastSync, round, sleepOf, statsOf, weekStart, weightKg,
+} from "@/lib/data";
+import { buildCoach, type Session } from "@/lib/coach";
 import { COACH } from "@/lib/config";
-import { longDate } from "@/lib/format";
+import { fmtHours, longDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const latest = <T,>(rows: Daily[], pick: (p: any) => T | null): T | null => {
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const v = pick(rows[i].payload);
+    if (v != null) return v;
+  }
+  return null;
+};
+
 const LEVEL_LABEL = { green: "Green · ready", amber: "Amber · go easy", red: "Red · recover" } as const;
 const STATUS_LABEL = { good: "Normal", watch: "Watch", low: "Flag", unknown: "No data" } as const;
-const SPORT_COLOR = { bike: "var(--bike)", swim: "var(--swim)", run: "var(--run)", rest: "var(--text-muted)" } as const;
+const SPORT_COLOR = { bike: "var(--bike)", swim: "var(--swim)", run: "var(--run)", rest: "var(--text-muted)", gym: "var(--power)" } as const;
 
 export default async function Today() {
   const [acts, stats, sleep, hrv, readiness, weight, synced] = await Promise.all([
@@ -24,9 +35,24 @@ export default async function Today() {
   const c = buildCoach({ acts, stats, sleep, hrv, readiness, weight });
   const s = c.session;
 
+  const rhr = latest(stats, (p) => statsOf(p).rhr);
+  const rhr7 = avg(stats.slice(-7).map((d) => statsOf(d.payload).rhr));
+  const hrvNow = latest(hrv, (p) => hrvOf(p).last);
+  const hrvWeekly = latest(hrv, (p) => hrvOf(p).weekly);
+  const hrv7 = avg(hrv.slice(-7).map((d) => hrvOf(d.payload).last));
+  const sleepLast = latest(sleep, (p) => sleepOf(p).total);
+  const sleepScore = latest(sleep, (p) => sleepOf(p).score);
+  const sleep7 = avg(sleep.slice(-7).map((d) => sleepOf(d.payload).total));
+  const bb = latest(stats, (p) => statsOf(p).bbHigh);
+  const steps = latest(stats, (p) => statsOf(p).steps);
+  const kg = latest(weight, (p) => weightKg(p));
+  const week = acts.filter((a) => a.day >= weekStart(c.today));
+  const weekHours = week.reduce((t, a) => t + durSec(a), 0) / 3600;
+  const weekKm = week.reduce((t, a) => t + km(a), 0);
+
   return (
     <>
-      <h1>Today</h1>
+      <h1>Plan</h1>
       <p className="lede">
         {longDate(c.today)}. Built from your sleep, HRV, resting heart rate, body battery and recent training. Last synced {synced ?? "never"} (London time).
       </p>
@@ -46,8 +72,26 @@ export default async function Today() {
           color="var(--power)"
           label="Garmin readiness"
           value={c.garmin?.score != null ? String(Math.round(c.garmin.score)) : "–"}
-          sub={c.garmin?.level ? c.garmin.level.toLowerCase() : "Garmin's own score, for comparison"}
+          sub={c.garmin?.level ? c.garmin.level.toLowerCase() : "Garmin's own score"}
         />
+        <Tile color="var(--hr)" label="Resting HR" value={rhr != null ? String(Math.round(rhr)) : "–"} unit="bpm" sub={rhr7 != null ? `7-day avg ${Math.round(rhr7)}` : undefined} />
+        <Tile
+          color="var(--power)"
+          label="HRV (last night)"
+          value={hrvNow != null ? String(Math.round(hrvNow)) : "–"}
+          unit="ms"
+          sub={hrv7 != null ? `7-day avg ${Math.round(hrv7)}${hrvWeekly != null ? ` · Garmin ${Math.round(hrvWeekly)}` : ""}` : undefined}
+        />
+        <Tile
+          color="var(--swim)"
+          label="Sleep"
+          value={sleepLast != null ? fmtHours(sleepLast) : "–"}
+          sub={[sleepScore != null ? `score ${sleepScore}` : null, sleep7 != null ? `7-day avg ${fmtHours(sleep7)}` : null].filter(Boolean).join(" · ") || undefined}
+        />
+        <Tile color="var(--elev)" label="Body battery (peak)" value={bb != null ? String(Math.round(bb)) : "–"} />
+        <Tile color="var(--run)" label="Steps" value={steps != null ? steps.toLocaleString("en-GB") : "–"} />
+        <Tile color="var(--target)" label="Weight" value={kg != null ? String(round(kg, 1)) : "–"} unit="kg" />
+        <Tile color="var(--bike)" label="This week" value={String(week.length)} unit="sessions" sub={`${fmtHours(weekHours)} · ${round(weekKm, 1)} km`} />
         <Tile color="var(--hr)" label="Load vs 4-wk avg" value={c.load.acwr != null ? `${c.load.acwr.toFixed(2)}×` : "–"} sub="sweet spot 0.8–1.3" />
         <Tile color="var(--elev)" label="Form" value={String(c.load.form)} sub={`fitness ${c.load.ctl} · fatigue ${c.load.atl}`} />
         <Tile color="var(--run)" label="Run min (7 days)" value={String(c.runMinutes.last7)} unit={`/ ${c.runMinutes.cap}`} sub="weekly cap" />
@@ -56,16 +100,22 @@ export default async function Today() {
       <div className="grid">
         <section className="card wide session">
           <header className="card-head"><h3>Suggested session</h3></header>
-          <h3 className="title" style={{ color: SPORT_COLOR[s.sport] }}>{s.title}</h3>
-          <div className="chips">
-            <span className="tag">{s.duration}</span>
-            <span className="tag">{s.intensity}</span>
-          </div>
-          <ol className="steps">
-            {s.steps.map((step) => <li key={step}>{step}</li>)}
-          </ol>
-          <p className="why">{s.why}</p>
+          <SessionBlock s={s} />
         </section>
+
+        {c.alternatives.length > 0 && (
+          <section className="card wide session">
+            <header className="card-head">
+              <h3>{c.alternatives.length > 1 ? "Or, if you'd rather do something else" : "Or, if you'd rather not"}</h3>
+              <p>Same recovery picture, different way to spend it.</p>
+            </header>
+            {c.alternatives.map((alt, i) => (
+              <div key={alt.title} className={i > 0 ? "alt-sep" : undefined}>
+                <SessionBlock s={alt} showWhy={false} />
+              </div>
+            ))}
+          </section>
+        )}
 
         <section className="card" data-s={c.run.allowed ? "good" : "watch"}>
           <header className="card-head"><h3>Can you run today?</h3></header>
@@ -188,6 +238,22 @@ export default async function Today() {
           This is coaching guidance from your data, not medical advice. If something hurts, stop and follow your physio.
         </p>
       </details>
+    </>
+  );
+}
+
+function SessionBlock({ s, showWhy = true }: { s: Session; showWhy?: boolean }) {
+  return (
+    <>
+      <h3 className="title" style={{ color: SPORT_COLOR[s.sport] }}>{s.title}</h3>
+      <div className="chips">
+        <span className="tag">{s.duration}</span>
+        <span className="tag">{s.intensity}</span>
+      </div>
+      <ol className="steps">
+        {s.steps.map((step) => <li key={step}>{step}</li>)}
+      </ol>
+      {showWhy && <p className="why">{s.why}</p>}
     </>
   );
 }

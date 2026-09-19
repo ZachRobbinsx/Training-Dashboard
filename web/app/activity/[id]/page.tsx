@@ -4,14 +4,14 @@ import Chart from "@/components/Chart";
 import Tile from "@/components/Tile";
 import { MAX_HR } from "@/lib/config";
 import {
-  type FullActivity, type Lap, avgHr, cadence, durSec, getActivity, km, num, paceSecPerKm,
+  GYM, type FullActivity, type Lap, avgHr, cadence, durSec, getActivity, km, num, paceSecPerKm,
   speedKmh, sportOf, strokeDistCm, swimPaceSecPer100, thirds,
 } from "@/lib/data";
 import { fmtDur, longDate, mmss } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-const HUB = { run: ["/running", "Running", "var(--run)"], ride: ["/cycling", "Cycling", "var(--bike)"], swim: ["/swimming", "Swimming", "var(--swim)"], other: ["/activities", "Activities", "var(--accent)"] } as const;
+const HUB = { run: ["/running", "Run", "var(--run)"], ride: ["/cycling", "Bike", "var(--bike)"], swim: ["/swimming", "Swim", "var(--swim)"], other: ["/activities", "Activities", "var(--accent)"] } as const;
 
 export default async function ActivityPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -20,7 +20,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
   const a = await getActivity(n);
   if (!a) notFound();
   const kind = sportOf(a.type);
-  const [href, hubName, color] = HUB[kind];
+  const [href, hubName, color] = GYM.includes(a.type) ? (["/gym", "Gym", "var(--power)"] as const) : HUB[kind];
 
   return (
     <>
@@ -200,7 +200,8 @@ function OtherView({ a }: { a: FullActivity }) {
     <div className="tiles">
       <Tile label="Distance" value={km(a) ? km(a).toFixed(1) : "–"} unit="km" />
       <Tile label="Time" value={fmtDur(durSec(a))} />
-      <Tile color="var(--hr)" label="Avg HR" value={fmt0(avgHr(a))} unit="bpm" />
+      <Tile color="var(--hr)" label="Avg HR" value={fmt0(avgHr(a))} unit="bpm" sub={num(a.s.maxHR) ? `max ${Math.round(a.s.maxHR)}` : undefined} />
+      {num(a.s.calories) ? <Tile label="Calories" value={String(Math.round(a.s.calories))} unit="kcal" /> : null}
     </div>
   );
 }

@@ -11,7 +11,7 @@ export type Level = "green" | "amber" | "red";
 export type Signal = { key: string; label: string; status: Status; value: string; baseline: string; note: string };
 export type Session = {
   title: string;
-  sport: "bike" | "swim" | "run" | "rest";
+  sport: "bike" | "swim" | "run" | "rest" | "gym";
   duration: string;
   intensity: string;
   steps: string[];
@@ -37,6 +37,7 @@ export type CoachResult = {
   signals: Signal[];
   garmin: { score: number | null; level: string | null; feedback: string | null } | null;
   session: Session;
+  alternatives: Session[];
   run: RunAdvice;
   tomorrow: string;
   load: { acute7: number | null; chronicWeekly: number | null; acwr: number | null; atl: number; ctl: number; form: number };
@@ -380,7 +381,7 @@ export function buildCoach(input: CoachInput): CoachResult {
       return t / ((num(a.s.distance) ?? 1) / 100);
     });
   const swimPace = median(swimPaces);
-  const session = buildSession({
+  const plan = buildSessions({
     level: forcedEasy ? "amber" : level,
     forcedEasy,
     dow,
@@ -394,6 +395,7 @@ export function buildCoach(input: CoachInput): CoachResult {
     swimPace,
     flagged,
   });
+  const session = plan.session;
 
   /* --- tomorrow --- */
   let tomorrow: string;
@@ -423,6 +425,7 @@ export function buildCoach(input: CoachInput): CoachResult {
     signals,
     garmin,
     session,
+    alternatives: plan.alternatives,
     run,
     tomorrow,
     load: { acute7: rnd(acute7), chronicWeekly: rnd(chronicWeekly), acwr: acwr != null ? rnd(acwr, 2) : null, atl: rnd(atl), ctl: rnd(ctl), form: rnd(ctl - atl) },
@@ -480,127 +483,113 @@ type SessionCtx = {
   flagged: Signal[];
 };
 
-function buildSession(c: SessionCtx): Session {
+type Plan = { session: Session; alternatives: Session[] };
+
+function buildSessions(c: SessionCtx): Plan {
   const why = c.forcedEasy
     ? "Five or more training days in a row. A planned easy day keeps the next block productive."
     : c.flagged.length
       ? c.flagged.map((s) => `${s.label}: ${s.note}`).join(" ")
       : "All recovery signals are normal and last week's load is manageable.";
+  const altWhy = "Same recovery picture as the main session. A different way to spend it.";
   const commute = c.isCommuteDay ? "Commute day: ride in at an easy, conversational effort. It counts toward your load." : null;
   const withCommute = (steps: string[]) => (commute ? [commute, ...steps] : steps);
   const strokeLo = SWIM_STROKE_TARGET_CM[0];
   const strokeHi = SWIM_STROKE_TARGET_CM[1];
 
-  if (c.level === "red") {
+  const recovery = (w: string): Session => ({
+    title: "Recovery day",
+    sport: "rest",
+    duration: "20–40 min",
+    intensity: `Very easy, heart rate under ${zoneTop(0.6)} bpm`,
+    steps: withCommute([
+      "Easy walk outdoors, or a gentle spin.",
+      "10 minutes of mobility for calves, hips and ankles. Only what feels good.",
+      "Do your prescribed rehab exercises.",
+      "Aim to be in bed 30–60 minutes earlier tonight.",
+    ]),
+    why: w,
+  });
+  const fullRest = (w: string): Session => ({
+    title: "Full rest",
+    sport: "rest",
+    duration: "–",
+    intensity: "Nothing structured",
+    steps: withCommute([
+      "No training today. A short walk is fine.",
+      "Eat well, drink plenty, and be in bed early.",
+      "If HRV and resting heart rate are back to normal tomorrow, resume with an easy session.",
+    ]),
+    why: w,
+  });
+  const swimEasy = (w: string): Session => ({
+    title: "Easy swim: technique",
+    sport: "swim",
+    duration: "30–40 min",
+    intensity: "Easy (RPE 3–4)",
+    steps: withCommute([
+      "Warm-up: 200 easy + 4 × 50 drill (fingertip drag or catch-up), 15 s rest.",
+      `Main: 6 × 100 easy, 20 s rest. Long, smooth strokes: aim for ${strokeLo}–${strokeHi} cm per stroke.`,
+      "Cool-down: 100 easy.",
+      "Finish with 10 minutes of mobility and your rehab work.",
+    ]),
+    why: w,
+  });
+  const spinEasy = (w: string): Session => ({
+    title: "Easy spin",
+    sport: "bike",
+    duration: "45–60 min",
+    intensity: `Zone 1–2, heart rate under ${zoneTop(0.7)} bpm`,
+    steps: withCommute([
+      `Spin at 85–95 rpm, heart rate ${zone(0.5, 0.7)}. Should feel too easy.`,
+      "No hard efforts, no hills you have to push.",
+      "10 minutes of mobility and your rehab work afterwards.",
+    ]),
+    why: w,
+  });
+  const swimQuality = (w: string): Session => {
+    const p = c.swimPace;
+    const target = p ? `${mmss(p - 7)}–${mmss(p - 1)} per 100 m (a touch quicker than your recent average)` : "steady-hard (RPE 7)";
     return {
-      title: "Recovery day",
-      sport: "rest",
-      duration: "20–40 min",
-      intensity: `Very easy, heart rate under ${zoneTop(0.6)} bpm`,
-      steps: withCommute([
-        "Easy walk outdoors, or a gentle spin.",
-        "10 minutes of mobility for calves, hips and ankles. Only what feels good.",
-        "Do your prescribed rehab exercises.",
-        "Aim to be in bed 30–60 minutes earlier tonight.",
-      ]),
-      why,
-    };
-  }
-
-  if (c.level === "amber") {
-    if (c.swims7 < 2) {
-      return {
-        title: "Easy swim: technique",
-        sport: "swim",
-        duration: "30–40 min",
-        intensity: "Easy (RPE 3–4)",
-        steps: withCommute([
-          "Warm-up: 200 easy + 4 × 50 drill (fingertip drag or catch-up), 15 s rest.",
-          `Main: 6 × 100 easy, 20 s rest. Long, smooth strokes: aim for ${strokeLo}–${strokeHi} cm per stroke.`,
-          "Cool-down: 100 easy.",
-          "Finish with 10 minutes of mobility and your rehab work.",
-        ]),
-        why,
-      };
-    }
-    return {
-      title: "Easy spin",
-      sport: "bike",
-      duration: "45–60 min",
-      intensity: `Zone 1–2, heart rate under ${zoneTop(0.7)} bpm`,
-      steps: withCommute([
-        `Spin at 85–95 rpm, heart rate ${zone(0.5, 0.7)}. Should feel too easy.`,
-        "No hard efforts, no hills you have to push.",
-        "10 minutes of mobility and your rehab work afterwards.",
-      ]),
-      why,
-    };
-  }
-
-  // Green
-  const weekend = c.dow >= 6;
-  const qualityOk = c.hardLast7 < 2 && !c.yesterdayStress && c.stressLast3 < 2 && (c.acwr == null || c.acwr <= 1.3);
-  if (weekend && !c.longRide7 && c.stressLast3 < 2 && (c.acwr == null || c.acwr <= 1.3) && !c.yesterdayStress) {
-    return {
-      title: "Long endurance ride",
-      sport: "bike",
-      duration: "2–2.5 h",
-      intensity: `Zone 2, heart rate ${zone(0.6, 0.75)}`,
-      steps: [
-        "Steady, conversational effort. Drift above the top of the range only on short climbs.",
-        "Eat and drink from the first 30 minutes: 40–60 g carbohydrate per hour.",
-        "Cadence 85–95 rpm. Finish feeling like you could do more.",
-      ],
-      why,
-    };
-  }
-  if (qualityOk) {
-    if (c.swims7 <= 1) {
-      const p = c.swimPace;
-      const target = p ? `${mmss(p - 7)}–${mmss(p - 1)} per 100 m (a touch quicker than your recent average)` : "steady-hard (RPE 7)";
-      return {
-        title: "Swim: pace & stroke length",
-        sport: "swim",
-        duration: "45–55 min",
-        intensity: "Steady-hard (RPE 7) in the main set",
-        steps: withCommute([
-          "Warm-up: 300 easy + 4 × 50 drill, 15 s rest.",
-          `Main: 8 × 100 at ${target}, 20 s rest. Count strokes per length: keep the count flat across the set and stay at ${strokeLo} cm or more per stroke.`,
-          "Then 4 × 50 building fast, 20 s rest.",
-          "Cool-down: 200 easy.",
-        ]),
-        why,
-      };
-    }
-    return {
-      title: "Bike: threshold intervals",
-      sport: "bike",
-      duration: "60–75 min",
-      intensity: `Main set steady-hard, heart rate ${zone(0.8, 0.88)} (RPE 7)`,
-      steps: withCommute([
-        `Warm-up 15 min, building through Zone 2 (${zone(0.6, 0.7)}).`,
-        "Main: 4 × 6 min steady-hard, 3 min easy spinning between.",
-        "Cool-down: 10 min easy.",
-        "If the last interval feels hard to finish, stop the set there.",
-      ]),
-      why,
-    };
-  }
-  if (c.swims7 < 2) {
-    return {
-      title: "Swim: aerobic endurance",
+      title: "Swim: pace & stroke length",
       sport: "swim",
-      duration: "40–50 min",
-      intensity: "Steady (RPE 5)",
+      duration: "45–55 min",
+      intensity: "Steady-hard (RPE 7) in the main set",
       steps: withCommute([
-        "Warm-up: 300 easy + 4 × 50 drill.",
-        "Main: 5 × 200 steady, 20 s rest. Smooth and long, same stroke count each length.",
-        "4 × 50 technique drill, then 200 easy.",
+        "Warm-up: 300 easy + 4 × 50 drill, 15 s rest.",
+        `Main: 8 × 100 at ${target}, 20 s rest. Count strokes per length: keep the count flat across the set and stay at ${strokeLo} cm or more per stroke.`,
+        "Then 4 × 50 building fast, 20 s rest.",
+        "Cool-down: 200 easy.",
       ]),
-      why,
+      why: w,
     };
-  }
-  return {
+  };
+  const bikeQuality = (w: string): Session => ({
+    title: "Bike: threshold intervals",
+    sport: "bike",
+    duration: "60–75 min",
+    intensity: `Main set steady-hard, heart rate ${zone(0.8, 0.88)} (RPE 7)`,
+    steps: withCommute([
+      `Warm-up 15 min, building through Zone 2 (${zone(0.6, 0.7)}).`,
+      "Main: 4 × 6 min steady-hard, 3 min easy spinning between.",
+      "Cool-down: 10 min easy.",
+      "If the last interval feels hard to finish, stop the set there.",
+    ]),
+    why: w,
+  });
+  const swimEndurance = (w: string): Session => ({
+    title: "Swim: aerobic endurance",
+    sport: "swim",
+    duration: "40–50 min",
+    intensity: "Steady (RPE 5)",
+    steps: withCommute([
+      "Warm-up: 300 easy + 4 × 50 drill.",
+      "Main: 5 × 200 steady, 20 s rest. Smooth and long, same stroke count each length.",
+      "4 × 50 technique drill, then 200 easy.",
+    ]),
+    why: w,
+  });
+  const steadyRide = (w: string): Session => ({
     title: "Steady aerobic ride",
     sport: "bike",
     duration: "60–90 min",
@@ -610,8 +599,69 @@ function buildSession(c: SessionCtx): Session {
       "Cadence 85–95 rpm.",
       "A steady day now sets up quality later in the week.",
     ]),
-    why,
-  };
+    why: w,
+  });
+  const longRide = (w: string): Session => ({
+    title: "Long endurance ride",
+    sport: "bike",
+    duration: "2–2.5 h",
+    intensity: `Zone 2, heart rate ${zone(0.6, 0.75)}`,
+    steps: [
+      "Steady, conversational effort. Drift above the top of the range only on short climbs.",
+      "Eat and drink from the first 30 minutes: 40–60 g carbohydrate per hour.",
+      "Cadence 85–95 rpm. Finish feeling like you could do more.",
+    ],
+    why: w,
+  });
+  const gymStrength = (w: string): Session => ({
+    title: "Gym: full-body strength",
+    sport: "gym",
+    duration: "40–50 min",
+    intensity: "Moderate, RPE 6–7 (2–3 reps left in the tank)",
+    steps: withCommute([
+      "Warm-up 8 min: easy bike or rower, then light band work for hips and shoulders.",
+      "3 rounds: goblet squat × 8, Romanian deadlift × 8, dumbbell bench press or push-up × 8–10, seated row or pull-up × 8–10, side plank 30–40 s each side.",
+      "Finish with 5 minutes of core and hip work: glute bridges, dead bugs.",
+      "Skip jumping and plyometrics. Stop any movement that irritates the shin, Achilles or big toe, and keep calf work exactly as your physio prescribed.",
+    ]),
+    why: w,
+  });
+  const gymLight = (w: string): Session => ({
+    title: "Gym: light strength & mobility",
+    sport: "gym",
+    duration: "30 min",
+    intensity: "Easy (RPE 4–5)",
+    steps: withCommute([
+      "2 rounds: glute bridge × 12, dead bug × 10 each side, incline push-up × 10, band row × 12, side plank 30 s each side.",
+      "10 minutes of mobility: hips, thoracic spine, calves and ankles. Only what feels good.",
+      "Nothing that leaves you sore tomorrow.",
+    ]),
+    why: w,
+  });
+
+  if (c.level === "red") return { session: recovery(why), alternatives: [fullRest(altWhy)] };
+
+  if (c.level === "amber") {
+    return c.swims7 < 2
+      ? { session: swimEasy(why), alternatives: [spinEasy(altWhy), gymLight(altWhy)] }
+      : { session: spinEasy(why), alternatives: [swimEasy(altWhy), gymLight(altWhy)] };
+  }
+
+  // Green
+  const weekend = c.dow >= 6;
+  const loadOk = c.acwr == null || c.acwr <= 1.3;
+  const qualityOk = c.hardLast7 < 2 && !c.yesterdayStress && c.stressLast3 < 2 && loadOk;
+  if (weekend && !c.longRide7 && c.stressLast3 < 2 && loadOk && !c.yesterdayStress) {
+    return { session: longRide(why), alternatives: [swimEndurance(altWhy), gymStrength(altWhy)] };
+  }
+  if (qualityOk) {
+    return c.swims7 <= 1
+      ? { session: swimQuality(why), alternatives: [bikeQuality(altWhy), gymStrength(altWhy)] }
+      : { session: bikeQuality(why), alternatives: [swimQuality(altWhy), gymStrength(altWhy)] };
+  }
+  return c.swims7 < 2
+    ? { session: swimEndurance(why), alternatives: [steadyRide(altWhy), gymStrength(altWhy)] }
+    : { session: steadyRide(why), alternatives: [swimEndurance(altWhy), gymStrength(altWhy)] };
 }
 
 /* ---------------- trends ---------------- */
