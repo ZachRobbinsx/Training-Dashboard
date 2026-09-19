@@ -3,7 +3,7 @@ import Tile from "@/components/Tile";
 import {
   type Daily, avg, durSec, getActivities, getDaily, getDailySlim, hrvOf, km, lastSync, round, sleepOf, statsOf, weekStart, weightKg,
 } from "@/lib/data";
-import { buildCoach, type Session } from "@/lib/coach";
+import { addDays, buildCoach, type Session } from "@/lib/coach";
 import { COACH } from "@/lib/config";
 import { fmtHours, longDate } from "@/lib/format";
 
@@ -44,8 +44,11 @@ export default async function Today() {
   const sleepScore = latest(sleep, (p) => sleepOf(p).score);
   const sleep7 = avg(sleep.slice(-7).map((d) => sleepOf(d.payload).total));
   const bb = latest(stats, (p) => statsOf(p).bbHigh);
-  const steps = latest(stats, (p) => statsOf(p).steps);
+  const bb7 = avg(stats.slice(-7).map((d) => statsOf(d.payload).bbHigh));
   const kg = latest(weight, (p) => weightKg(p));
+  const wRows = weight.map((d) => ({ day: d.day, v: weightKg(d.payload) })).filter((r): r is { day: string; v: number } => r.v != null);
+  const w7 = avg(wRows.filter((r) => r.day > addDays(c.today, -7)).map((r) => r.v));
+  const wPrev = avg(wRows.filter((r) => r.day <= addDays(c.today, -7) && r.day > addDays(c.today, -14)).map((r) => r.v));
   const week = acts.filter((a) => a.day >= weekStart(c.today));
   const weekHours = week.reduce((t, a) => t + durSec(a), 0) / 3600;
   const weekKm = week.reduce((t, a) => t + km(a), 0);
@@ -89,9 +92,7 @@ export default async function Today() {
           value={sleepLast != null ? fmtHours(sleepLast) : "–"}
           sub={[sleepScore != null ? `score ${sleepScore}` : null, sleep7 != null ? `7-day avg ${fmtHours(sleep7)}` : null].filter(Boolean).join(" · ") || undefined}
         />
-        <Tile color="var(--elev)" label="Body battery (peak)" value={bb != null ? String(Math.round(bb)) : "–"} />
-        <Tile color="var(--run)" label="Steps" value={steps != null ? steps.toLocaleString("en-GB") : "–"} />
-        <Tile color="var(--target)" label="Weight" value={kg != null ? String(round(kg, 1)) : "–"} unit="kg" />
+        <Tile color="var(--elev)" label="Body battery (peak)" value={bb != null ? String(Math.round(bb)) : "–"} sub={bb7 != null ? `7-day avg ${Math.round(bb7)}` : undefined} />
       </div>
 
       <h2 className="sect">Weekly</h2>
@@ -99,6 +100,17 @@ export default async function Today() {
         <Tile color="var(--bike)" label="This week" value={String(week.length)} unit="sessions" sub={`${fmtHours(weekHours)} · ${round(weekKm, 1)} km`} />
         <Tile color="var(--hr)" label="Load vs 4-wk avg" value={c.load.acwr != null ? `${c.load.acwr.toFixed(2)}×` : "–"} sub="sweet spot 0.8–1.3" />
         <Tile color="var(--elev)" label="Form" value={String(c.load.form)} sub={`fitness ${c.load.ctl} · fatigue ${c.load.atl}`} />
+        <Tile
+          color="var(--target)"
+          label="Weight"
+          value={kg != null ? String(round(kg, 1)) : "–"}
+          unit="kg"
+          sub={
+            w7 != null
+              ? `7-day avg ${round(w7, 1)} kg${wPrev != null ? ` · ${w7 - wPrev >= 0 ? "+" : "−"}${Math.abs(round(w7 - wPrev, 1)!)} vs prior week` : ""}`
+              : "no weigh-in in the last 7 days"
+          }
+        />
         <Tile color="var(--run)" label="Run min (7 days)" value={String(c.runMinutes.last7)} unit={`/ ${c.runMinutes.cap}`} sub="weekly cap" />
       </div>
 
