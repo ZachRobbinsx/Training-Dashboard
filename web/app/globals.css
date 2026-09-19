@@ -86,8 +86,9 @@ a { color: inherit; }
   position: sticky; top: 0; background: var(--bg); z-index: 20;
 }
 .brand { font-weight: 700; letter-spacing: 0.12em; font-size: 12px; text-transform: uppercase; color: var(--accent); }
-.nav { display: flex; gap: 2px; flex-wrap: wrap; flex: 1; }
-.nav a { color: var(--text-secondary); text-decoration: none; padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+.nav { display: flex; gap: 2px; flex-wrap: nowrap; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.nav::-webkit-scrollbar { display: none; }
+.nav a { white-space: nowrap; color: var(--text-secondary); text-decoration: none; padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; }
 .nav a:hover { background: var(--grid); }
 .nav a[aria-current="page"] { color: var(--text); background: var(--grid); }
 .logout button { background: none; border: 0; color: var(--text-muted); cursor: pointer; font-size: 12px; }
@@ -115,7 +116,8 @@ h1 { font-size: clamp(20px, 4.5vw, 28px); margin: 0 0 4px; letter-spacing: -0.01
 .tile .v { font-size: 22px; font-weight: 700; color: var(--tile, var(--text)); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
 .tile .v small { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-left: 3px; font-family: inherit; }
 .tile .sub { font-size: 11px; color: var(--text-muted); }
-.tile .badge { position: absolute; top: 8px; right: 8px; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: var(--grid); color: var(--tile, var(--text)); }
+.tile .k-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.tile .badge { flex: none; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: var(--grid); color: var(--tile, var(--text)); white-space: nowrap; }
 
 /* tooltip */
 .tip { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.35); max-width: 260px; }

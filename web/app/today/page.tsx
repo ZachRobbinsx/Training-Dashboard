@@ -20,6 +20,8 @@ const latest = <T,>(rows: Daily[], pick: (p: any) => T | null): T | null => {
 
 const LEVEL_LABEL = { green: "Green · ready", amber: "Amber · go easy", red: "Red · recover" } as const;
 const STATUS_LABEL = { good: "Normal", watch: "Watch", low: "Flag", unknown: "No data" } as const;
+const STATUS_COLOR = { good: "var(--ok)", watch: "var(--warn)", low: "var(--bad)", unknown: "var(--text-muted)" } as const;
+const NEUTRAL = "var(--text-secondary)";
 const SPORT_COLOR = { bike: "var(--bike)", swim: "var(--swim)", run: "var(--run)", rest: "var(--text-muted)", gym: "var(--power)" } as const;
 
 export default async function Today() {
@@ -34,6 +36,10 @@ export default async function Today() {
   ]);
   const c = buildCoach({ acts, stats, sleep, hrv, readiness, weight });
   const s = c.session;
+  const st = (key: string) => c.signals.find((g) => g.key === key)?.status ?? "unknown";
+  const readinessStatus = c.garmin?.score == null ? "unknown" : c.garmin.score >= 70 ? "good" : c.garmin.score >= 40 ? "watch" : "low";
+  const runRatio = c.runMinutes.cap > 0 ? c.runMinutes.last7 / c.runMinutes.cap : 0;
+  const runStatus = runRatio <= 0.75 ? "good" : runRatio <= 1 ? "watch" : "low";
 
   const rhr = latest(stats, (p) => statsOf(p).rhr);
   const rhr7 = avg(stats.slice(-7).map((d) => statsOf(d.payload).rhr));
@@ -57,7 +63,7 @@ export default async function Today() {
     <>
       <h1>Overview</h1>
       <p className="lede">
-        {longDate(c.today)}. Built from your sleep, HRV, resting heart rate, body battery and recent training. Last synced {synced ?? "never"} (London time).
+        {longDate(c.today)}. Built from your sleep, HRV, resting heart rate, body battery and recent training. Last synced {synced ?? "never"} (London time). Tile colours show status: green is normal, amber is worth watching, red is a flag, grey is for information only.
       </p>
 
       <h2 className="sect">Status</h2>
@@ -73,35 +79,38 @@ export default async function Today() {
       <h2 className="sect">Daily</h2>
       <div className="tiles">
         <Tile
-          color="var(--power)"
+          color={STATUS_COLOR[readinessStatus]}
+          badge={STATUS_LABEL[readinessStatus]}
           label="Garmin readiness"
           value={c.garmin?.score != null ? String(Math.round(c.garmin.score)) : "–"}
           sub={c.garmin?.level ? c.garmin.level.toLowerCase() : "Garmin's own score"}
         />
-        <Tile color="var(--hr)" label="Resting HR" value={rhr != null ? String(Math.round(rhr)) : "–"} unit="bpm" sub={rhr7 != null ? `7-day avg ${Math.round(rhr7)}` : undefined} />
+        <Tile color={STATUS_COLOR[st("rhr")]} badge={STATUS_LABEL[st("rhr")]} label="Resting HR" value={rhr != null ? String(Math.round(rhr)) : "–"} unit="bpm" sub={rhr7 != null ? `7-day avg ${Math.round(rhr7)}` : undefined} />
         <Tile
-          color="var(--power)"
+          color={STATUS_COLOR[st("hrv")]}
+          badge={STATUS_LABEL[st("hrv")]}
           label="HRV (last night)"
           value={hrvNow != null ? String(Math.round(hrvNow)) : "–"}
           unit="ms"
           sub={hrv7 != null ? `7-day avg ${Math.round(hrv7)}${hrvWeekly != null ? ` · Garmin ${Math.round(hrvWeekly)}` : ""}` : undefined}
         />
         <Tile
-          color="var(--swim)"
+          color={STATUS_COLOR[st("sleep")]}
+          badge={STATUS_LABEL[st("sleep")]}
           label="Sleep"
           value={sleepLast != null ? fmtHours(sleepLast) : "–"}
           sub={[sleepScore != null ? `score ${sleepScore}` : null, sleep7 != null ? `7-day avg ${fmtHours(sleep7)}` : null].filter(Boolean).join(" · ") || undefined}
         />
-        <Tile color="var(--elev)" label="Body battery (peak)" value={bb != null ? String(Math.round(bb)) : "–"} sub={bb7 != null ? `7-day avg ${Math.round(bb7)}` : undefined} />
+        <Tile color={STATUS_COLOR[st("bb")]} badge={STATUS_LABEL[st("bb")]} label="Body battery (peak)" value={bb != null ? String(Math.round(bb)) : "–"} sub={bb7 != null ? `7-day avg ${Math.round(bb7)}` : undefined} />
       </div>
 
       <h2 className="sect">Weekly</h2>
       <div className="tiles">
-        <Tile color="var(--bike)" label="This week" value={String(week.length)} unit="sessions" sub={`${fmtHours(weekHours)} · ${round(weekKm, 1)} km`} />
-        <Tile color="var(--hr)" label="Load vs 4-wk avg" value={c.load.acwr != null ? `${c.load.acwr.toFixed(2)}×` : "–"} sub="sweet spot 0.8–1.3" />
-        <Tile color="var(--elev)" label="Form" value={String(c.load.form)} sub={`fitness ${c.load.ctl} · fatigue ${c.load.atl}`} />
+        <Tile color={NEUTRAL} label="This week" value={String(week.length)} unit="sessions" sub={`${fmtHours(weekHours)} · ${round(weekKm, 1)} km`} />
+        <Tile color={STATUS_COLOR[st("load")]} badge={STATUS_LABEL[st("load")]} label="Load vs 4-wk avg" value={c.load.acwr != null ? `${c.load.acwr.toFixed(2)}×` : "–"} sub="sweet spot 0.8–1.3" />
+        <Tile color={NEUTRAL} label="Form" value={String(c.load.form)} sub={`fitness ${c.load.ctl} · fatigue ${c.load.atl}`} />
         <Tile
-          color="var(--target)"
+          color={NEUTRAL}
           label="Weight"
           value={kg != null ? String(round(kg, 1)) : "–"}
           unit="kg"
@@ -111,7 +120,7 @@ export default async function Today() {
               : "no weigh-in in the last 7 days"
           }
         />
-        <Tile color="var(--run)" label="Run min (7 days)" value={String(c.runMinutes.last7)} unit={`/ ${c.runMinutes.cap}`} sub="weekly cap" />
+        <Tile color={STATUS_COLOR[runStatus]} badge={runStatus === "good" ? "Room" : runStatus === "watch" ? "Near cap" : "Over cap"} label="Run min (7 days)" value={String(c.runMinutes.last7)} unit={`/ ${c.runMinutes.cap}`} sub="weekly cap" />
       </div>
 
       <h2 className="sect">Workout</h2>

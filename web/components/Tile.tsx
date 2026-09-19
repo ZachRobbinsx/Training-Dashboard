@@ -15,8 +15,10 @@ export default function Tile({
 }) {
   return (
     <div className="tile" style={color ? ({ ["--tile" as string]: color } as React.CSSProperties) : undefined}>
-      {badge && <span className="badge">{badge}</span>}
-      <div className="k">{label}</div>
+      <div className="k-row">
+        <div className="k">{label}</div>
+        {badge && <span className="badge">{badge}</span>}
+      </div>
       <div className="v">
         {value}
         {unit && value !== "–" && <small>{unit}</small>}
